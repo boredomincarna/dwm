@@ -1,0 +1,35 @@
+--- dwm.c
++++ dwm.c
+@@ -694,11 +740,30 @@ createmon(void)
+ void
+ destroynotify(XEvent *e)
+ {
+-	Client *c;
++	Client *c, *swee, *root;
+ 	XDestroyWindowEvent *ev = &e->xdestroywindow;
+ 
+-	if ((c = wintoclient(ev->window)))
++	switch (wintoclient2(ev->window, &c, &root)) {
++	case ClientRegular:
++		unmanage(c, 1);
++		break;
++	case ClientSwallowee:
++		swalstop(c, NULL);
+ 		unmanage(c, 1);
++		break;
++	case ClientSwallower:
++		/* If the swallower is swallowed by another client, terminate the
++		 * swallow. This cuts off the swallow chain after the client. */
++		swalstop(c, root);
++
++		/* Cut off the swallow chain before the client. */
++		for (swee = root; swee->swallowedby != c; swee = swee->swallowedby);
++		swee->swallowedby = NULL;
++
++		free(c);
++		updateclientlist();
++		break;
++	}
+ }
+ 
+ void
